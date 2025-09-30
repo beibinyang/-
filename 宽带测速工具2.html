@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpeedTest - 服务器测速工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#36CFC9',
+            accent: '#722ED1',
+            neutral: '#1F2937',
+            'neutral-light': '#F3F4F6',
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .gradient-bg {
+        background: linear-gradient(135deg, #165DFF 0%, #36CFC9 100%);
+      }
+      .card-hover {
+        transition: all 0.3s ease;
+      }
+      .card-hover:hover {
+        transform: translateY(-5px);
+      }
+      .pulse-animation {
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+      .progress-animation {
+        animation: progress 1.5s ease-in-out infinite;
+      }
+      @keyframes progress {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+    }
+  </style>
+</head>
+<body class="font-inter bg-gray-50 text-neutral">
+  <!-- 导航栏 -->
+  <header class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm shadow-sm z-50 transition-all duration-300">
+    <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-bolt text-primary text-2xl"></i>
+        <h1 class="text-xl font-bold text-primary">SpeedTest</h1>
+      </div>
+      
+      <nav class="hidden md:flex items-center space-x-8">
+        <a href="#" class="font-medium text-primary border-b-2 border-primary py-1">首页</a>
+        <a href="#history" class="font-medium text-gray-600 hover:text-primary transition-colors py-1">历史记录</a>
+        <a href="#about" class="font-medium text-gray-600 hover:text-primary transition-colors py-1">关于</a>
+      </nav>
+      
+      <div class="flex items-center space-x-4">
+        <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <i class="fa fa-moon-o text-gray-600"></i>
+        </button>
+        <button class="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <i class="fa fa-bars text-gray-600"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="container mx-auto px-4 pt-24 pb-16">
+    <!-- 欢迎区域 -->
+    <section class="text-center mb-12">
+      <h2 class="text-[clamp(1.8rem,5vw,3rem)] font-bold text-neutral mb-4 text-shadow">
+        测试您的<span class="text-primary">网络速度</span>
+      </h2>
+      <p class="text-gray-600 max-w-2xl mx-auto text-lg">
+        选择服务器位置，进行精准的下载、上传速度和延迟测试，获取实时网络性能数据
+      </p>
+    </section>
+    
+    <!-- 测速控制区 -->
+    <section class="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-12 transform transition-all duration-500 hover:shadow-xl">
+      <!-- 服务器选择标签 -->
+      <div class="mb-8">
+        <div class="flex border-b border-gray-200">
+          <button id="domestic-tab" class="py-3 px-6 font-medium text-primary border-b-2 border-primary">
+            <i class="fa fa-map-marker mr-2"></i>全国测速
+          </button>
+          <button id="international-tab" class="py-3 px-6 font-medium text-gray-500 hover:text-gray-700">
+            <i class="fa fa-globe mr-2"></i>全球测速
+          </button>
+        </div>
+      </div>
+      
+      <!-- 服务器选择列表 -->
+      <div id="domestic-servers" class="mb-8">
+        <h3 class="text-lg font-semibold mb-4">选择国内服务器</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <button class="server-btn bg-primary/10 text-primary border border-primary/30 rounded-lg p-3 text-sm font-medium hover:bg-primary/20 transition-colors active">
+            <i class="fa fa-server mr-1"></i>北京
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>上海
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>广州
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>深圳
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>成都
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>杭州
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>武汉
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>西安
+          </button>
+        </div>
+      </div>
+      
+      <div id="international-servers" class="mb-8 hidden">
+        <h3 class="text-lg font-semibold mb-4">选择全球服务器</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <button class="server-btn bg-primary/10 text-primary border border-primary/30 rounded-lg p-3 text-sm font-medium hover:bg-primary/20 transition-colors active">
+            <i class="fa fa-server mr-1"></i>东京
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>新加坡
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>洛杉矶
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>纽约
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>伦敦
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>法兰克福
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>悉尼
+          </button>
+          <button class="server-btn bg-gray-100 text-gray-700 border border-gray-200 rounded-lg p-3 text-sm font-medium hover:bg-gray-200 transition-colors">
+            <i class="fa fa-server mr-1"></i>迪拜
+          </button>
+        </div>
+      </div>
+      
+      <!-- 测速按钮 -->
+      <div class="text-center mb-8">
+        <button id="start-test" class="gradient-bg text-white px-8 py-4 rounded-full text-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 pulse-animation">
+          <i class="fa fa-play mr-2"></i>开始测速
+        </button>
+        <button id="stop-test" class="hidden bg-gray-600 text-white px-8 py-4 rounded-full text-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300">
+          <i class="fa fa-stop mr-2"></i>停止测速
+        </button>
+      </div>
+      
+      <!-- 测速进度和结果 -->
+      <div id="test-results" class="space-y-6">
+        <!-- 延迟测试 -->
+        <div class="result-card">
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center">
+              <i class="fa fa-clock-o text-accent text-xl mr-3"></i>
+              <h4 class="font-semibold">延迟</h4>
+            </div>
+            <span id="ping-result" class="text-2xl font-bold text-accent">-</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div id="ping-bar" class="bg-accent h-2.5 rounded-full w-0 transition-all duration-500"></div>
+          </div>
+        </div>
+        
+        <!-- 下载速度测试 -->
+        <div class="result-card">
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center">
+              <i class="fa fa-download text-primary text-xl mr-3"></i>
+              <h4 class="font-semibold">下载速度</h4>
+            </div>
+            <span id="download-result" class="text-2xl font-bold text-primary">-</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div id="download-bar" class="bg-primary h-2.5 rounded-full w-0 transition-all duration-500"></div>
+          </div>
+        </div>
+        
+        <!-- 上传速度测试 -->
+        <div class="result-card">
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center">
+              <i class="fa fa-upload text-secondary text-xl mr-3"></i>
+              <h4 class="font-semibold">上传速度</h4>
+            </div>
+            <span id="upload-result" class="text-2xl font-bold text-secondary">-</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div id="upload-bar" class="bg-secondary h-2.5 rounded-full w-0 transition-all duration-500"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测速状态 -->
+      <div id="test-status" class="mt-6 text-center text-gray-600 hidden">
+        <p><i class="fa fa-spinner fa-spin mr-2"></i><span id="status-text">准备测试...</span></p>
+      </div>
+    </section>
+    
+    <!-- 测速结果图表 -->
+    <section class="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-12">
+      <h3 class="text-xl font-bold mb-6">速度趋势图</h3>
+      <div class="h-64">
+        <canvas id="speed-chart"></canvas>
+      </div>
+    </section>
+    
+    <!-- 服务器信息卡片 -->
+    <section class="max-w-4xl mx-auto mb-12">
+      <h3 class="text-2xl font-bold mb-6">推荐服务器</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- 推荐服务器1 -->
+        <div class="bg-white rounded-xl shadow-md p-5 card-hover border-l-4 border-primary">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="font-bold text-lg">北京电信</h4>
+              <p class="text-gray-500 text-sm"><i class="fa fa-map-marker mr-1"></i>中国 · 北京</p>
+            </div>
+            <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">低延迟</span>
+          </div>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">延迟</span>
+              <span class="font-medium">12ms</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">下载</span>
+              <span class="font-medium">185 Mbps</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">上传</span>
+              <span class="font-medium">52 Mbps</span>
+            </div>
+          </div>
+          <button class="mt-4 w-full py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors">
+            选择此服务器
+          </button>
+        </div>
+        
+        <!-- 推荐服务器2 -->
+        <div class="bg-white rounded-xl shadow-md p-5 card-hover border-l-4 border-secondary">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="font-bold text-lg">上海联通</h4>
+              <p class="text-gray-500 text-sm"><i class="fa fa-map-marker mr-1"></i>中国 · 上海</p>
+            </div>
+            <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">高带宽</span>
+          </div>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">延迟</span>
+              <span class="font-medium">25ms</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">下载</span>
+              <span class="font-medium">210 Mbps</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">上传</span>
+              <span class="font-medium">65 Mbps</span>
+            </div>
+          </div>
+          <button class="mt-4 w-full py-2 bg-secondary/10 text-secondary rounded-lg text-sm font-medium hover:bg-secondary/20 transition-colors">
+            选择此服务器
+          </button>
+        </div>
+        
+        <!-- 推荐服务器3 -->
+        <div class="bg-white rounded-xl shadow-md p-5 card-hover border-l-4 border-accent">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="font-bold text-lg">新加坡节点</h4>
+              <p class="text-gray-500 text-sm"><i class="fa fa-map-marker mr-1"></i>新加坡</p>
+            </div>
+            <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">国际</span>
+          </div>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">延迟</span>
+              <span class="font-medium">85ms</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">下载</span>
+              <span class="font-medium">150 Mbps</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">上传</span>
+              <span class="font-medium">40 Mbps</span>
+            </div>
+          </div>
+          <button class="mt-4 w-full py-2 bg-accent/10 text-accent rounded-lg text-sm font-medium hover:bg-accent/20 transition-colors">
+            选择此服务器
+          </button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 历史记录 -->
+    <section id="history" class="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-12">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold">测速历史记录</h3>
+        <button id="clear-history" class="text-gray-500 hover:text-red-500 text-sm flex items-center">
+          <i class="fa fa-trash mr-1"></i> 清空记录
+        </button>
+      </div>
+      
+      <div id="history-list" class="space-y-4">
+        <!-- 历史记录项1 -->
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h4 class="font-medium">北京服务器</h4>
+              <p class="text-gray-500 text-sm"><i class="fa fa-clock-o mr-1"></i>今天 14:30</p>
+            </div>
+            <span class="text-xs bg-gray-100 px-2 py-1 rounded-full">国内</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center text-sm">
+            <div>
+              <p class="text-gray-500">延迟</p>
+              <p class="font-medium text-accent">18ms</p>
+            </div>
+            <div>
+              <p class="text-gray-500">下载</p>
+              <p class="font-medium text-primary">168 Mbps</p>
+            </div>
+            <div>
+              <p class="text-gray-500">上传</p>
+              <p class="font-medium text-secondary">45 Mbps</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 历史记录项2 -->
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h4 class="font-medium">东京服务器</h4>
+              <p class="text-gray-500 text-sm"><i class="fa fa-clock-o mr-1"></i>昨天 09:15</p>
+            </div>
+            <span class="text-xs bg-gray-100 px-2 py-1 rounded-full">国际</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center text-sm">
+            <div>
+              <p class="text-gray-500">延迟</p>
+              <p class="font-medium text-accent">92ms</p>
+            </div>
+            <div>
+              <p class="text-gray-500">下载</p>
+              <p class="font-medium text-primary">85 Mbps</p>
+            </div>
+            <div>
+              <p class="text-gray-500">上传</p>
+              <p class="font-medium text-secondary">28 Mbps</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="no-history" class="text-center py-8 text-gray-500 hidden">
+        <i class="fa fa-history text-4xl mb-3 opacity-30"></i>
+        <p>暂无测速历史记录</p>
+      </div>
+    </section>
+    
+    <!-- 关于 -->
+    <section id="about" class="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
+      <h3 class="text-xl font-bold mb-4">关于测速工具</h3>
+      <p class="text-gray-600 mb-4">
+        本工具通过连接选定服务器，使用标准方法测量您的网络性能，包括延迟、下载速度和上传速度。
+      </p>
+      <p class="text-gray-600 mb-4">
+        测速原理：通过向目标服务器发送和接收数据块，计算传输时间和速率来确定网络速度。测试过程大约需要30秒。
+      </p>
+      <div class="bg-neutral-light rounded-lg p-4">
+        <h4 class="font-medium mb-2">测速提示</h4>
+        <ul class="list-disc pl-5 text-gray-600 space-y-1 text-sm">
+          <li>测试前请关闭其他占用网络带宽的应用</li>
+          <li>建议多次测试取平均值以获得更准确的结果</li>
+          <li>不同时间段的网络速度可能会有所差异</li>
+          <li>无线连接可能会比有线连接结果低</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  
+  <!-- 页脚 -->
+  <footer class="bg-neutral text-white py-10">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <div class="flex items-center space-x-2 mb-4">
+            <i class="fa fa-bolt text-primary text-2xl"></i>
+            <h2 class="text-xl font-bold">SpeedTest</h2>
+          </div>
+          <p class="text-gray-400 text-sm">
+            专业的服务器测速工具，帮助您了解网络性能，选择最佳连接。
+          </p>
+        </div>
+        
+        <div>
+          <h3 class="font-bold mb-4">快速链接</h3>
+          <ul class="space-y-2 text-gray-400">
+            <li><a href="#" class="hover:text-primary transition-colors">首页</a></li>
+            <li><a href="#history" class="hover:text-primary transition-colors">历史记录</a></li>
+            <li><a href="#about" class="hover:text-primary transition-colors">关于我们</a></li>
+            <li><a href="#" class="hover:text-primary transition-colors">使用帮助</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="font-bold mb-4">联系我们</h3>
+          <ul class="space-y-2 text-gray-400">
+            <li class="flex items-center"><i class="fa fa-envelope-o mr-2"></i> support@speedtest.com</li>
+            <li class="flex items-center"><i class="fa fa-phone mr-2"></i> 400-123-4567</li>
+          </ul>
+          <div class="mt-4 flex space-x-4">
+            <a href="#" class="text-gray-400 hover:text-primary transition-colors"><i class="fa fa-weibo text-xl"></i></a>
+            <a href="#" class="text-gray-400 hover:text-primary transition-colors"><i class="fa fa-wechat text-xl"></i></a>
+            <a href="#" class="text-gray-400 hover:text-primary transition-colors"><i class="fa fa-github text-xl"></i></a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-500 text-sm">
+        <p>&copy; 2023 SpeedTest 服务器测速工具. 保留所有权利.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script>
+    // DOM元素
+    const domesticTab = document.getElementById('domestic-tab');
+    const internationalTab = document.getElementById('international-tab');
+    const domesticServers = document.getElementById('domestic-servers');
+    const internationalServers = document.getElementById('international-servers');
+    const serverBtns = document.querySelectorAll('.server-btn');
+    const startTestBtn = document.getElementById('start-test');
+    const stopTestBtn = document.getElementById('stop-test');
+    const testStatus = document.getElementById('test-status');
+    const statusText = document.getElementById('status-text');
+    const pingBar = document.getElementById('ping-bar');
+    const downloadBar = document.getElementById('download-bar');
+    const uploadBar = document.getElementById('upload-bar');
+    const pingResult = document.getElementById('ping-result');
+    const downloadResult = document.getElementById('download-result');
+    const uploadResult = document.getElementById('upload-result');
+    const clearHistoryBtn = document.getElementById('clear-history');
+    const historyList = document.getElementById('history-list');
+    const noHistory = document.getElementById('no-history');
+    
+    // 标签切换
+    domesticTab.addEventListener('click', () => {
+      domesticTab.classList.add('text-primary', 'border-primary', 'border-b-2');
+      domesticTab.classList.remove('text-gray-500');
+      internationalTab.classList.remove('text-primary', 'border-primary', 'border-b-2');
+      internationalTab.classList.add('text-gray-500');
+      domesticServers.classList.remove('hidden');
+      internationalServers.classList.add('hidden');
+    });
+    
+    internationalTab.addEventListener('click', () => {
+      internationalTab.classList.add('text-primary', 'border-primary', 'border-b-2');
+      internationalTab.classList.remove('text-gray-500');
+      domesticTab.classList.remove('text-primary', 'border-primary', 'border-b-2');
+      domesticTab.classList.add('text-gray-500');
+      internationalServers.classList.remove('hidden');
+      domesticServers.classList.add('hidden');
+    });
+    
+    // 服务器选择
+    serverBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // 清除同组中其他按钮的选中状态
+        const parent = btn.parentElement;
+        parent.querySelectorAll('.server-btn').forEach(b => {
+          b.classList.remove('bg-primary/10', 'text-primary', 'border-primary/30');
+          b.classList.add('bg-gray-100', 'text-gray-700', 'border-gray-200');
+        });
+        
+        // 设置当前按钮为选中状态
+        btn.classList.remove('bg-gray-100', 'text-gray-700', 'border-gray-200');
+        btn.classList.add('bg-primary/10', 'text-primary', 'border-primary/30');
+      });
+    });
+    
+    // 初始化图表
+    const ctx = document.getElementById('speed-chart').getContext('2d');
+    const speedChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
+        datasets: [
+          {
+            label: '下载速度 (Mbps)',
+            data: [80, 95, 110, 105, 120, 135],
+            borderColor: '#165DFF',
+            backgroundColor: 'rgba(22, 93, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+          },
+          {
+            label: '上传速度 (Mbps)',
+            data: [30, 35, 40, 45, 50, 55],
+            borderColor: '#36CFC9',
+            backgroundColor: 'rgba(54, 207, 201, 0.1)',
+            tension: 0.4,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: '速度 (Mbps)'
+            }
+          }
+        }
+      }
+    });
+    
+    // 测速功能模拟
+    let testInterval;
+    let isTesting = false;
+    
+    startTestBtn.addEventListener('click', startTest);
+    stopTestBtn.addEventListener('click', stopTest);
+    
+    function startTest() {
+      if (isTesting) return;
+      
+      isTesting = true;
+      startTestBtn.classList.add('hidden');
+      stopTestBtn.classList.remove('hidden');
+      testStatus.classList.remove('hidden');
+      
+      // 重置进度条和结果
+      resetTestUI();
+      
+      // 开始测试流程
+      let step = 0;
+      
+      testInterval = setInterval(() => {
+        step++;
+        
+        if (step <= 3) {
+          // 延迟测试
+          statusText.textContent = '正在测试延迟...';
+          const pingValue = Math.floor(Math.random() * 50) + 10; // 10-60ms
+          pingBar.style.width = `${Math.min(100, pingValue * 2)}%`;
+          pingResult.textContent = `${pingValue}ms`;
+        } 
+        else if (step <= 15) {
+          // 下载测试 (持续时间更长)
+          statusText.textContent = '正在测试下载速度...';
+          const downloadProgress = Math.min(100, Math.floor((step - 3) / 12 * 100));
+          const downloadValue = Math.floor(downloadProgress * 1.5); // 0-150 Mbps
+          downloadBar.style.width = `${downloadProgress}%`;
+          downloadResult.textContent = `${downloadValue} Mbps`;
+        } 
+        else if (step <= 25) {
+          // 上传测试
+          statusText.textContent = '正在测试上传速度...';
+          const uploadProgress = Math.min(100, Math.floor((step - 15) / 10 * 100));
+          const uploadValue = Math.floor(uploadProgress * 0.6); // 0-60 Mbps
+          uploadBar.style.width = `${uploadProgress}%`;
+          uploadResult.textContent = `${uploadValue} Mbps`;
+        } 
+        else {
+          // 测试完成
+          statusText.textContent = '测试完成';
+          saveTestResult();
+          stopTest();
+        }
+      }, 500);
+    }
+    
+    function stopTest() {
+      clearInterval(testInterval);
+      isTesting = false;
+      startTestBtn.classList.remove('hidden');
+      stopTestBtn.classList.add('hidden');
+    }
+    
+    function resetTestUI() {
+      pingBar.style.width = '0%';
+      downloadBar.style.width = '0%';
+      uploadBar.style.width = '0%';
+      pingResult.textContent = '-';
+      downloadResult.textContent = '-';
+      uploadResult.textContent = '-';
+    }
+    
+    // 保存测试结果到历史记录
+    function saveTestResult() {
+      // 获取当前选中的服务器
+      const activeServer = document.querySelector('.server-btn.bg-primary\\/10');
+      const serverName = activeServer ? activeServer.textContent.trim() : '未知服务器';
+      const isDomestic = !internationalServers.classList.contains('hidden');
+      
+      // 获取当前时间
+      const now = new Date();
+      const timeString = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const dateString = now.toLocaleDateString();
+      
+      // 创建新的历史记录项
+      const historyItem = document.createElement('div');
+      historyItem.className = 'border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow';
+      historyItem.innerHTML = `
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h4 class="font-medium">${serverName}</h4>
+            <p class="text-gray-500 text-sm"><i class="fa fa-clock-o mr-1"></i>${dateString} ${timeString}</p>
+          </div>
+          <span class="text-xs bg-gray-100 px-2 py-1 rounded-full">${isDomestic ? '国内' : '国际'}</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center text-sm">
+          <div>
+            <p class="text-gray-500">延迟</p>
+            <p class="font-medium text-accent">${pingResult.textContent}</p>
+          </div>
+          <div>
+            <p class="text-gray-500">下载</p>
+            <p class="font-medium text-primary">${downloadResult.textContent}</p>
+          </div>
+          <div>
+            <p class="text-gray-500">上传</p>
+            <p class="font-medium text-secondary">${uploadResult.textContent}</p>
+          </div>
+        </div>
+      `;
+      
+      // 添加到历史记录列表顶部
+      historyList.prepend(historyItem);
+      
+      // 检查是否需要显示"无历史"提示
+      checkHistoryVisibility();
+    }
+    
+    // 清空历史记录
+    clearHistoryBtn.addEventListener('click', () => {
+      if (confirm('确定要清空所有测速历史记录吗？')) {
+        historyList.innerHTML = '';
+        checkHistoryVisibility();
+      }
+    });
+    
+    // 检查历史记录是否为空
+    function checkHistoryVisibility() {
+      if (historyList.children.length === 0) {
+        noHistory.classList.remove('hidden');
+      } else {
+        noHistory.classList.add('hidden');
+      }
+    }
+    
+    // 页面滚动时改变导航栏样式
+    window.addEventListener('scroll', () => {
+      const header = document.querySelector('header');
+      if (window.scrollY > 50) {
+        header.classList.add('py-2', 'shadow');
+        header.classList.remove('py-3');
+      } else {
+        header.classList.add('py-3');
+        header.classList.remove('py-2', 'shadow');
+      }
+    });
+    
+    // 初始化
+    checkHistoryVisibility();
+  </script>
+</body>
+</html>

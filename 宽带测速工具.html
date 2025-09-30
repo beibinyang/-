@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网站速度测试工具</title>
+  <!-- 外部资源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#36BFFA',
+            success: '#00B42A',
+            warning: '#FF7D00',
+            danger: '#F53F3F',
+            dark: '#1D2129',
+            light: '#F2F3F5'
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .card-hover {
+        transition: all 0.3s ease;
+      }
+      .card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(22, 93, 255, 0.1), 0 10px 10px -5px rgba(22, 93, 255, 0.04);
+      }
+    }
+  </style>
+</head>
+<body class="font-inter bg-gray-50 text-dark min-h-screen">
+  <!-- 导航栏 -->
+  <header class="bg-white shadow-sm sticky top-0 z-50 transition-all duration-300" id="navbar">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-bolt text-primary text-2xl"></i>
+        <h1 class="text-xl font-bold text-primary">SpeedTest<span class="text-dark">Web</span></h1>
+      </div>
+      
+      <nav class="hidden md:flex items-center space-x-8">
+        <a href="#" class="font-medium text-primary border-b-2 border-primary py-1">首页</a>
+        <a href="#about" class="font-medium text-gray-600 hover:text-primary transition-colors py-1">关于</a>
+        <a href="#history" class="font-medium text-gray-600 hover:text-primary transition-colors py-1">历史记录</a>
+        <a href="#faq" class="font-medium text-gray-600 hover:text-primary transition-colors py-1">常见问题</a>
+      </nav>
+      
+      <button class="md:hidden text-dark text-xl" id="menuToggle">
+        <i class="fa fa-bars"></i>
+      </button>
+    </div>
+    
+    <!-- 移动端菜单 -->
+    <div class="md:hidden hidden bg-white shadow-md absolute w-full" id="mobileMenu">
+      <div class="container mx-auto px-4 py-3 flex flex-col space-y-3">
+        <a href="#" class="font-medium text-primary py-2">首页</a>
+        <a href="#about" class="font-medium text-gray-600 hover:text-primary transition-colors py-2">关于</a>
+        <a href="#history" class="font-medium text-gray-600 hover:text-primary transition-colors py-2">历史记录</a>
+        <a href="#faq" class="font-medium text-gray-600 hover:text-primary transition-colors py-2">常见问题</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <!-- 英雄区域 -->
+    <section class="text-center mb-16">
+      <h2 class="text-[clamp(2rem,5vw,3.5rem)] font-bold mb-4 text-shadow">
+        测试你的网站速度
+      </h2>
+      <p class="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
+        输入任何网站URL，获取详细的加载速度分析，包括响应时间、加载时间和性能评分
+      </p>
+      
+      <!-- 测速表单 -->
+      <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 card-hover">
+        <form id="speedTestForm" class="flex flex-col md:flex-row gap-4">
+          <div class="flex-1 relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fa fa-globe text-gray-400"></i>
+            </div>
+            <input 
+              type="url" 
+              id="websiteUrl" 
+              placeholder="输入网站URL (例如: https://example.com)" 
+              required
+              class="block w-full pl-10 pr-3 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
+            >
+          </div>
+          <button 
+            type="submit" 
+            id="testButton"
+            class="bg-primary hover:bg-primary/90 text-white font-medium py-4 px-8 rounded-lg transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+          >
+            <i class="fa fa-bolt"></i>
+            <span>开始测试</span>
+          </button>
+        </form>
+        
+        <!-- 测试选项 -->
+        <div class="mt-4 flex flex-wrap gap-3 justify-center">
+          <label class="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" id="testDetailed" class="form-checkbox text-primary rounded">
+            <span>详细测试</span>
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" id="testMultiple" class="form-checkbox text-primary rounded">
+            <span>多次测试取平均值</span>
+          </label>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 结果区域 -->
+    <section id="resultsSection" class="mb-16 hidden">
+      <h3 class="text-2xl font-bold mb-6 text-center">测试结果</h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- 响应时间卡片 -->
+        <div class="bg-white rounded-xl shadow p-6 card-hover">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <i class="fa fa-clock-o text-primary text-xl"></i>
+            </div>
+            <h4 class="text-xl font-semibold">响应时间</h4>
+          </div>
+          <div class="flex items-end gap-2">
+            <span id="responseTime" class="text-3xl font-bold">0</span>
+            <span class="text-gray-500 mb-1">毫秒</span>
+          </div>
+          <div class="mt-4">
+            <div class="flex justify-between text-sm mb-1">
+              <span>性能评级</span>
+              <span id="responseRating" class="font-medium">-</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div id="responseBar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 加载时间卡片 -->
+        <div class="bg-white rounded-xl shadow p-6 card-hover">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
+              <i class="fa fa-download text-secondary text-xl"></i>
+            </div>
+            <h4 class="text-xl font-semibold">加载时间</h4>
+          </div>
+          <div class="flex items-end gap-2">
+            <span id="loadTime" class="text-3xl font-bold">0</span>
+            <span class="text-gray-500 mb-1">秒</span>
+          </div>
+          <div class="mt-4">
+            <div class="flex justify-between text-sm mb-1">
+              <span>性能评级</span>
+              <span id="loadRating" class="font-medium">-</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div id="loadBar" class="bg-secondary h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 总体评分卡片 -->
+        <div class="bg-white rounded-xl shadow p-6 card-hover">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center">
+              <i class="fa fa-star text-success text-xl"></i>
+            </div>
+            <h4 class="text-xl font-semibold">总体评分</h4>
+          </div>
+          <div class="flex items-end gap-2">
+            <span id="overallScore" class="text-3xl font-bold">0</span>
+            <span class="text-gray-500 mb-1">/ 100</span>
+          </div>
+          <div class="mt-4">
+            <div class="flex justify-between text-sm mb-1">
+              <span>性能评级</span>
+              <span id="overallRating" class="font-medium">-</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div id="overallBar" class="bg-success h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 图表和详细信息 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 加载时间图表 -->
+        <div class="bg-white rounded-xl shadow p-6 card-hover">
+          <h4 class="text-xl font-semibold mb-4">加载时间分布</h4>
+          <div class="h-64">
+            <canvas id="loadingChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- 详细信息 -->
+        <div class="bg-white rounded-xl shadow p-6 card-hover">
+          <h4 class="text-xl font-semibold mb-4">详细信息</h4>
+          <ul class="space-y-3">
+            <li class="flex justify-between pb-3 border-b border-gray-100">
+              <span class="text-gray-600">测试网址</span>
+              <span id="testedUrl" class="font-medium break-all"></span>
+            </li>
+            <li class="flex justify-between pb-3 border-b border-gray-100">
+              <span class="text-gray-600">测试时间</span>
+              <span id="testTime" class="font-medium"></span>
+            </li>
+            <li class="flex justify-between pb-3 border-b border-gray-100">
+              <span class="text-gray-600">DNS 解析时间</span>
+              <span id="dnsTime" class="font-medium">-</span>
+            </li>
+            <li class="flex justify-between pb-3 border-b border-gray-100">
+              <span class="text-gray-600">连接时间</span>
+              <span id="connectTime" class="font-medium">-</span>
+            </li>
+            <li class="flex justify-between pb-3 border-b border-gray-100">
+              <span class="text-gray-600">TTFB (首字节时间)</span>
+              <span id="ttfbTime" class="font-medium">-</span>
+            </li>
+            <li class="flex justify-between">
+              <span class="text-gray-600">测试服务器位置</span>
+              <span id="serverLocation" class="font-medium">北京, 中国</span>
+            </li>
+          </ul>
+          
+          <div class="mt-6 flex gap-3">
+            <button id="saveResultBtn" class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2">
+              <i class="fa fa-save"></i>
+              <span>保存结果</span>
+            </button>
+            <button id="reTestBtn" class="flex-1 bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2">
+              <i class="fa fa-refresh"></i>
+              <span>重新测试</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 测试中状态 -->
+    <section id="testingSection" class="mb-16 hidden">
+      <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
+        <div class="inline-block w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-6"></div>
+        <h3 class="text-2xl font-bold mb-4">正在测试网站速度...</h3>
+        <p class="text-gray-600 mb-6" id="testingMessage">请稍候，我们正在连接并分析目标网站</p>
+        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+          <div id="testingProgress" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
+        <p class="text-sm text-gray-500" id="progressPercentage">0%</p>
+      </div>
+    </section>
+    
+    <!-- 历史记录 -->
+    <section id="history" class="mb-16">
+      <h3 class="text-2xl font-bold mb-6 text-center">测试历史记录</h3>
+      
+      <div id="historyContainer" class="bg-white rounded-xl shadow overflow-hidden">
+        <div class="p-6">
+          <div id="noHistory" class="text-center py-12 text-gray-500">
+            <i class="fa fa-history text-4xl mb-4 opacity-30"></i>
+            <p>暂无测试记录</p>
+          </div>
+          
+          <div id="historyList" class="hidden">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">网站</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">响应时间</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">加载时间</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">评分</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">测试时间</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="historyItems">
+                  <!-- 历史记录将通过JS动态添加 -->
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="mt-6 flex justify-between items-center">
+              <button id="clearHistoryBtn" class="text-gray-600 hover:text-danger transition-colors flex items-center gap-1 text-sm">
+                <i class="fa fa-trash"></i>
+                <span>清除所有记录</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 关于 -->
+    <section id="about" class="mb-16">
+      <h3 class="text-2xl font-bold mb-6 text-center">关于网站测速</h3>
+      
+      <div class="bg-white rounded-xl shadow-lg p-8 max-w-3xl mx-auto">
+        <p class="text-gray-700 mb-4">
+          网站速度测试工具通过测量目标网站的响应时间、加载时间等关键指标，帮助您了解网站的性能表现。
+        </p>
+        <p class="text-gray-700 mb-6">
+          测试结果基于从我们的服务器到目标网站的连接，可能与实际用户体验有所差异，但可以作为网站性能优化的参考依据。
+        </p>
+        
+        <h4 class="text-xl font-semibold mb-3">为什么网站速度很重要？</h4>
+        <ul class="space-y-2 text-gray-700 mb-6">
+          <li class="flex items-start gap-2">
+            <i class="fa fa-check-circle text-success mt-1"></i>
+            <span>提高用户体验，减少访客流失</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <i class="fa fa-check-circle text-success mt-1"></i>
+            <span>改善搜索引擎排名（Google等搜索引擎将速度作为排名因素）</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <i class="fa fa-check-circle text-success mt-1"></i>
+            <span>降低服务器资源消耗，节省成本</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <i class="fa fa-check-circle text-success mt-1"></i>
+            <span>提升转化率和用户满意度</span>
+          </li>
+        </ul>
+        
+        <h4 class="text-xl font-semibold mb-3">如何提高网站速度？</h4>
+        <ul class="space-y-2 text-gray-700">
+          <li class="flex items-start gap-2">
+            <i class="fa fa-lightbulb-o text-warning mt-1"></i>
+            <span>压缩图片和其他媒体资源</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <i class="fa fa-lightbulb-o text-warning mt-1"></i>
+            <span>启用浏览器缓存和CDN加速</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <i class="fa fa-lightbulb-o text-warning mt-1"></i>
+            <span>优化CSS和JavaScript代码</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <i class="fa fa-lightbulb-o text-warning mt-1"></i>
+            <span>选择性能更好的主机和服务器</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+    
+    <!-- 常见问题 -->
+    <section id="faq" class="mb-16">
+      <h3 class="text-2xl font-bold mb-6 text-center">常见问题</h3>
+      
+      <div class="max-w-3xl mx-auto space-y-4">
+        <!-- FAQ项目 -->
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <button class="faq-toggle w-full flex justify-between items-center p-6 text-left focus:outline-none">
+            <span class="font-semibold text-lg">测试结果准确吗？</span>
+            <i class="fa fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+          </button>
+          <div class="faq-content hidden px-6 pb-6">
+            <p class="text-gray-600">
+              我们的测试结果基于从我们的服务器到目标网站的连接，提供相对准确的性能指标参考。但实际用户体验可能因地理位置、网络环境、设备性能等因素而有所不同。
+            </p>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <button class="faq-toggle w-full flex justify-between items-center p-6 text-left focus:outline-none">
+            <span class="font-semibold text-lg">多久可以测试一次？</span>
+            <i class="fa fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+          </button>
+          <div class="faq-content hidden px-6 pb-6">
+            <p class="text-gray-600">
+              为了保证服务质量，每个IP地址对同一网站的测试间隔建议不少于30秒。对于详细测试，建议间隔更长时间。
+            </p>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <button class="faq-toggle w-full flex justify-between items-center p-6 text-left focus:outline-none">
+            <span class="font-semibold text-lg">为什么我的网站测试失败？</span>
+            <i class="fa fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+          </button>
+          <div class="faq-content hidden px-6 pb-6">
+            <p class="text-gray-600">
+              测试失败可能有多种原因：目标网站无法访问、网络连接问题、网站防火墙限制、测试超时等。请检查网站是否正常运行，或稍后再试。
+            </p>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <button class="faq-toggle w-full flex justify-between items-center p-6 text-left focus:outline-none">
+            <span class="font-semibold text-lg">测试结果中的各项指标代表什么？</span>
+            <i class="fa fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+          </button>
+          <div class="faq-content hidden px-6 pb-6">
+            <p class="text-gray-600 mb-2">
+              <strong>响应时间</strong>：服务器收到请求到开始响应的时间，越短越好。
+            </p>
+            <p class="text-gray-600 mb-2">
+              <strong>加载时间</strong>：从发起请求到页面完全加载的时间，越短越好。
+            </p>
+            <p class="text-gray-600 mb-2">
+              <strong>DNS解析时间</strong>：将域名解析为IP地址的时间。
+            </p>
+            <p class="text-gray-600">
+              <strong>TTFB</strong>：首字节时间，服务器返回第一个字节的时间，反映服务器处理速度。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-dark text-white py-12">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <div class="flex items-center space-x-2 mb-4">
+            <i class="fa fa-bolt text-primary text-2xl"></i>
+            <h2 class="text-xl font-bold text-white">SpeedTest<span class="text-primary">Web</span></h2>
+          </div>
+          <p class="text-gray-400 mb-4">
+            专业的网站速度测试工具，帮助您了解和优化网站性能。
+          </p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+              <i class="fa fa-twitter"></i>
+            </a>
+            <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+              <i class="fa fa-github"></i>
+            </a>
+            <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+              <i class="fa fa-linkedin"></i>
+            </a>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-semibold mb-4">快速链接</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-primary transition-colors">首页</a></li>
+            <li><a href="#about" class="text-gray-400 hover:text-primary transition-colors">关于我们</a></li>
+            <li><a href="#faq" class="text-gray-400 hover:text-primary transition-colors">常见问题</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-primary transition-colors">联系我们</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-semibold mb-4">订阅更新</h3>
+          <p class="text-gray-400 mb-4">获取最新的网站性能优化技巧和工具更新</p>
+          <form class="flex">
+            <input type="email" placeholder="您的邮箱地址" class="px-4 py-2 rounded-l-lg w-full focus:outline-none text-dark">
+            <button type="submit" class="bg-primary hover:bg-primary/90 px-4 py-2 rounded-r-lg transition-colors">
+              <i class="fa fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
+        <p>&copy; 2023 SpeedTestWeb. 保留所有权利。</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 通知提示 -->
+  <div id="notification" class="fixed bottom-4 right-4 bg-dark text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3 z-50">
+    <i id="notificationIcon" class="fa fa-check-circle text-success"></i>
+    <span id="notificationMessage">操作成功</span>
+    <button id="closeNotification" class="text-gray-400 hover:text-white">
+      <i class="fa fa-times"></i>
+    </button>
+  </div>
+
+  <script>
+    // 全局变量
+    let loadingChart = null;
+    let testHistory = JSON.parse(localStorage.getItem('speedTestHistory')) || [];
+    
+    // DOM元素
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const navbar = document.getElementById('navbar');
+    const speedTestForm = document.getElementById('speedTestForm');
+    const websiteUrl = document.getElementById('websiteUrl');
+    const testButton = document.getElementById('testButton');
+    const resultsSection = document.getElementById('resultsSection');
+    const testingSection = document.getElementById('testingSection');
+    const testingProgress = document.getElementById('testingProgress');
+    const progressPercentage = document.getElementById('progressPercentage');
+    const testingMessage = document.getElementById('testingMessage');
+    const responseTime = document.getElementById('responseTime');
+    const loadTime = document.getElementById('loadTime');
+    const overallScore = document.getElementById('overallScore');
+    const responseBar = document.getElementById('responseBar');
+    const loadBar = document.getElementById('loadBar');
+    const overallBar = document.getElementById('overallBar');
+    const responseRating = document.getElementById('responseRating');
+    const loadRating = document.getElementById('loadRating');
+    const overallRating = document.getElementById('overallRating');
+    const testedUrl = document.getElementById('testedUrl');
+    const testTime = document.getElementById('testTime');
+    const dnsTime = document.getElementById('dnsTime');
+    const connectTime = document.getElementById('connectTime');
+    const ttfbTime = document.getElementById('ttfbTime');
+    const serverLocation = document.getElementById('serverLocation');
+    const reTestBtn = document.getElementById('reTestBtn');
+    const saveResultBtn = document.getElementById('saveResultBtn');
+    const noHistory = document.getElementById('noHistory');
+    const historyList = document.getElementById('historyList');
+    const historyItems = document.getElementById('historyItems');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const notification = document.getElementById('notification');
+    const notificationIcon = document.getElementById('notificationIcon');
+    const notificationMessage = document.getElementById('notificationMessage');
+    const closeNotification = document.getElementById('closeNotification');
+    const faqToggles = document.querySelectorAll('.faq-toggle');
+    
+    // 当前测试结果
+    let currentTestResult = null;
+    
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', () => {
+      // 初始化历史记录
+      updateHistoryDisplay();
+      
+      // 移动端菜单切换
+      menuToggle.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+      
+      // 滚动时导航栏效果
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+          navbar.classList.add('py-2', 'shadow');
+          navbar.classList.remove('py-4');
+        } else {
+          navbar.classList.add('py-4');
+          navbar.classList.remove('py-2', 'shadow');
+        }
+      });
+      
+      // 表单提交
+      speedTestForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        startSpeedTest();
+      });
+      
+      // 重新测试按钮
+      reTestBtn.addEventListener('click', () => {
+        startSpeedTest();
+      });
+      
+      // 保存结果按钮
+      saveResultBtn.addEventListener('click', saveTestResult);
+      
+      // 清除历史记录
+      clearHistoryBtn.addEventListener('click', clearHistory);
+      
+      // 关闭通知
+      closeNotification.addEventListener('click', hideNotification);
+      
+      // FAQ切换
+      faqToggles.forEach(toggle => {
+        toggle.addEventListener('click', () => {
+          const content = toggle.nextElementSibling;
+          const icon = toggle.querySelector('i');
+          
+          content.classList.toggle('hidden');
+          icon.classList.toggle('rotate-180');
+        });
+      });
+    });
+    
+    // 开始速度测试
+    function startSpeedTest() {
+      const url = websiteUrl.value.trim();
+      
+      // 验证URL
+      if (!url) {
+        showNotification('请输入网站URL', 'error');
+        return;
+      }
+      
+      // 确保URL以http://或https://开头
+      let testUrl = url;
+      if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
+        testUrl = 'https://' + testUrl;
+      }
+      
+      // 显示测试中状态
+      resultsSection.classList.add('hidden');
+      testingSection.classList.remove('hidden');
+      testingProgress.style.width = '0%';
+      progressPercentage.textContent = '0%';
+      
+      // 模拟测试过程（实际应用中应该是真实的测速逻辑）
+      simulateSpeedTest(testUrl);
+    }
+    
+    // 模拟速度测试（实际应用中需要替换为真实的测速API或逻辑）
+    function simulateSpeedTest(url) {
+      // 随机生成一些测试数据，实际应用中应该是真实的测量结果
+      const steps = [
+        { message: '正在解析域名...', progress: 20 },
+        { message: '正在建立连接...', progress: 40 },
+        { message: '正在发送请求...', progress: 60 },
+        { message: '正在接收数据...', progress: 80 },
+        { message: '正在分析结果...', progress: 95 }
+      ];
+      
+      let stepIndex = 0;
+      
+      // 模拟进度更新
+      const interval = setInterval(() => {
+        if (stepIndex < steps.length) {
+          testingMessage.textContent = steps[stepIndex].message;
+          testingProgress.style.width = steps[stepIndex].progress + '%';
+          progressPercentage.textContent = steps[stepIndex].progress + '%';
+          stepIndex++;
+        } else {
+          clearInterval(interval);
+          
+          // 生成随机测试结果
+          const responseTimeVal = Math.floor(Math.random() * 500) + 50; // 50-550ms
+          const dnsTimeVal = Math.floor(responseTimeVal * 0.3); // DNS时间约占响应时间的30%
+          const connectTimeVal = Math.floor(responseTimeVal * 0.4); // 连接时间约占响应时间的40%
+          const ttfbTimeVal = Math.floor(responseTimeVal * 0.3); // TTFB约占响应时间的30%
+          const loadTimeVal = (Math.random() * 3 + 0.5).toFixed(2); // 0.5-3.5秒
+          
+          // 计算评分 (响应时间越短评分越高)
+          let responseScore = 100 - (responseTimeVal / 10);
+          responseScore = Math.max(0, Math.min(100, responseScore));
+          
+          let loadScore = 100 - (parseFloat(loadTimeVal) * 15);
+          loadScore = Math.max(0, Math.min(100, loadScore));
+          
+          const overallScoreVal = Math.round((responseScore * 0.6 + loadScore * 0.4));
+          
+          // 保存当前测试结果
+          currentTestResult = {
+            url: url,
+            timestamp: new Date(),
+            responseTime: responseTimeVal,
+            loadTime: parseFloat(loadTimeVal),
+            dnsTime: dnsTimeVal,
+            connectTime: connectTimeVal,
+            ttfbTime: ttfbTimeVal,
+            overallScore: overallScoreVal,
+            serverLocation: '北京, 中国'
+          };
+          
+          // 显示测试结果
+          displayTestResults(currentTestResult);
+          
+          // 隐藏测试中状态
+          testingSection.classList.add('hidden');
+          resultsSection.classList.remove('hidden');
+        }
+      }, 800);
+    }
+    
+    // 显示测试结果
+    function displayTestResults(result) {
+      // 更新数值
+      responseTime.textContent = result.responseTime;
+      loadTime.textContent = result.loadTime;
+      overallScore.textContent = result.overallScore;
+      testedUrl.textContent = result.url;
+      testTime.textContent = formatDate(result.timestamp);
+      dnsTime.textContent = result.dnsTime + ' 毫秒';
+      connectTime.textContent = result.connectTime + ' 毫秒';
+      ttfbTime.textContent = result.ttfbTime + ' 毫秒';
+      serverLocation.textContent = result.serverLocation;
+      
+      // 更新进度条
+      responseBar.style.width = result.responseTime > 1000 ? '0%' : (100 - result.responseTime / 10) + '%';
+      loadBar.style.width = (100 - result.loadTime * 15) + '%';
+      overallBar.style.width = result.overallScore + '%';
+      
+      // 更新评级
+      responseRating.textContent = getRating(result.responseTime, 'response');
+      loadRating.textContent = getRating(result.loadTime, 'load');
+      overallRating.textContent = getRating(result.overallScore, 'score');
+      
+      // 更新进度条颜色
+      updateBarColor(responseBar, result.responseTime, 'response');
+      updateBarColor(loadBar, result.loadTime, 'load');
+      updateBarColor(overallBar, result.overallScore, 'score');
+      
+      // 创建加载时间图表
+      createLoadingChart(result);
+    }
+    
+    // 获取评级
+    function getRating(value, type) {
+      if (type === 'response') {
+        // 响应时间评级 (毫秒)
+        if (value < 100) return '优秀';
+        if (value < 300) return '良好';
+        if (value < 500) return '一般';
+        return '较差';
+      } else if (type === 'load') {
+        // 加载时间评级 (秒)
+        if (value < 1) return '优秀';
+        if (value < 2) return '良好';
+        if (value < 3) return '一般';
+        return '较差';
+      } else if (type === 'score') {
+        // 总分评级
+        if (value >= 90) return '优秀';
+        if (value >= 70) return '良好';
+        if (value >= 50) return '一般';
+        return '较差';
+      }
+      return '未知';
+    }
+    
+    // 更新进度条颜色
+    function updateBarColor(bar, value, type) {
+      // 移除所有颜色类
+      bar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-primary', 'bg-secondary');
+      
+      if (type === 'response') {
+        if (value < 100) bar.classList.add('bg-success');
+        else if (value < 300) bar.classList.add('bg-primary');
+        else if (value < 500) bar.classList.add('bg-warning');
+        else bar.classList.add('bg-danger');
+      } else if (type === 'load') {
+        if (value < 1) bar.classList.add('bg-success');
+        else if (value < 2) bar.classList.add('bg-primary');
+        else if (value < 3) bar.classList.add('bg-warning');
+        else bar.classList.add('bg-danger');
+      } else if (type === 'score') {
+        if (value >= 90) bar.classList.add('bg-success');
+        else if (value >= 70) bar.classList.add('bg-primary');
+        else if (value >= 50) bar.classList.add('bg-warning');
+        else bar.classList.add('bg-danger');
+      }
+    }
+    
+    // 创建加载时间图表
+    function createLoadingChart(result) {
+      const ctx = document.getElementById('loadingChart').getContext('2d');
+      
+      // 如果已有图表，先销毁
+      if (loadingChart) {
+        loadingChart.destroy();
+      }
+      
+      // 创建新图表
+      loadingChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['DNS解析', '连接建立', '首字节响应', '内容加载'],
+          datasets: [{
+            label: '时间 (毫秒)',
+            data: [
+              result.dnsTime,
+              result.connectTime,
+              result.ttfbTime,
+              Math.round(result.loadTime * 1000 - result.responseTime)
+            ],
+            backgroundColor: [
+              'rgba(22, 93, 255, 0.7)',
+              'rgba(54, 191, 250, 0.7)',
+              'rgba(0, 180, 42, 0.7)',
+              'rgba(255, 125, 0, 0.7)'
+            ],
+            borderColor: [
+              'rgba(22, 93, 255, 1)',
+              'rgba(54, 191, 250, 1)',
+              'rgba(0, 180, 42, 1)',
+              'rgba(255, 125, 0, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: '时间 (毫秒)'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+    
+    // 保存测试结果
+    function saveTestResult() {
+      if (!currentTestResult) return;
+      
+      // 检查是否已存在相同URL和时间的记录
+      const exists = testHistory.some(item => 
+        item.url === currentTestResult.url && 
+        new Date(item.timestamp).getTime() === new Date(currentTestResult.timestamp).getTime()
+      );
+      
+      if (!exists) {
+        // 添加到历史记录
+        testHistory.unshift(currentTestResult);
+        
+        // 限制历史记录数量
+        if (testHistory.length > 10) {
+          testHistory = testHistory.slice(0, 10);
+        }
+        
+        // 保存到本地存储
+        localStorage.setItem('speedTestHistory', JSON.stringify(testHistory));
+        
+        // 更新显示
+        updateHistoryDisplay();
+        
+        // 显示通知
+        showNotification('测试结果已保存到历史记录');
+      } else {
+        showNotification('该测试结果已存在', 'info');
+      }
+    }
+    
+    // 更新历史记录显示
+    function updateHistoryDisplay() {
+      if (testHistory.length === 0) {
+        noHistory.classList.remove('hidden');
+        historyList.classList.add('hidden');
+        return;
+      }
+      
+      noHistory.classList.add('hidden');
+      historyList.classList.remove('hidden');
+      
+      // 清空历史记录列表
+      historyItems.innerHTML = '';
+      
+      // 添加历史记录
+      testHistory.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 transition-colors';
+        
+        row.innerHTML = `
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm font-medium text-gray-900 break-all max-w-xs">${item.url}</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">${item.responseTime} 毫秒</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">${item.loadTime} 秒</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm font-medium ${getScoreColorClass(item.overallScore)}">${item.overallScore}</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${formatDate(item.timestamp)}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <button class="text-primary hover:text-primary/80 mr-3 view-history-item" data-index="${index}">查看</button>
+            <button class="text-danger hover:text-danger/80 delete-history-item" data-index="${index}">删除</button>
+          </td>
+        `;
+        
+        historyItems.appendChild(row);
+      });
+      
+      // 添加查看和删除事件
+      document.querySelectorAll('.view-history-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = parseInt(e.currentTarget.dataset.index);
+          viewHistoryItem(index);
+        });
+      });
+      
+      document.querySelectorAll('.delete-history-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = parseInt(e.currentTarget.dataset.index);
+          deleteHistoryItem(index);
+        });
+      });
+    }
+    
+    // 获取分数颜色类
+    function getScoreColorClass(score) {
+      if (score >= 90) return 'text-success';
+      if (score >= 70) return 'text-primary';
+      if (score >= 50) return 'text-warning';
+      return 'text-danger';
+    }
+    
+    // 查看历史记录项
+    function viewHistoryItem(index) {
+      if (index >= 0 && index < testHistory.length) {
+        currentTestResult = testHistory[index];
+        displayTestResults(currentTestResult);
+        
+        // 滚动到结果区域
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    
+    // 删除历史记录项
+    function deleteHistoryItem(index) {
+      if (index >= 0 && index < testHistory.length) {
+        testHistory.splice(index, 1);
+        localStorage.setItem('speedTestHistory', JSON.stringify(testHistory));
+        updateHistoryDisplay();
+        showNotification('记录已删除', 'info');
+      }
+    }
+    
+    // 清除所有历史记录
+    function clearHistory() {
+      if (confirm('确定要清除所有测试记录吗？')) {
+        testHistory = [];
+        localStorage.setItem('speedTestHistory', JSON.stringify(testHistory));
+        updateHistoryDisplay();
+        showNotification('所有记录已清除', 'info');
+      }
+    }
+    
+    // 显示通知
+    function showNotification(message, type = 'success') {
+      notificationMessage.textContent = message;
+      
+      // 设置图标和颜色
+      notificationIcon.className = '';
+      if (type === 'success') {
+        notificationIcon.className = 'fa fa-check-circle text-success';
+      } else if (type === 'error') {
+        notificationIcon.className = 'fa fa-exclamation-circle text-danger';
+      } else if (type === 'info') {
+        notificationIcon.className = 'fa fa-info-circle text-primary';
+      }
+      
+      // 显示通知
+      notification.classList.remove('translate-y-20', 'opacity-0');
+      notification.classList.add('translate-y-0', 'opacity-100');
+      
+      // 3秒后自动隐藏
+      setTimeout(hideNotification, 3000);
+    }
+    
+    // 隐藏通知
+    function hideNotification() {
+      notification.classList.remove('translate-y-0', 'opacity-100');
+      notification.classList.add('translate-y-20', 'opacity-0');
+    }
+    
+    // 格式化日期
+    function formatDate(date) {
+      const d = new Date(date);
+      return d.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+  </script>
+</body>
+</html>
