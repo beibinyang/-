@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>测速</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             margin: 0;
             min-height: 100vh;
@@ -14,6 +20,8 @@
             justify-content: center;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            opacity: 0;
+            transition: opacity 0.5s ease;
         }
 
         .container {
@@ -23,6 +31,8 @@
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
+            transform: translateY(20px);
+            transition: transform 0.5s ease;
         }
 
         h1 {
@@ -35,6 +45,7 @@
             display: flex;
             gap: 2rem;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -85,9 +96,53 @@
         .btn:active {
             transform: translateY(1px);
         }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #6e8efb;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 600px) {
+            .button-group {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .container {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+    
     <div class="container">
         <h1>选择要进入的版本</h1>
         <div class="button-group">
@@ -97,24 +152,52 @@
     </div>
 
     <script>
-        function navigate(url) {
-            // 添加页面过渡效果
+        // 确保DOM完全加载后再执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 添加延迟以确保所有资源已加载
+            setTimeout(function() {
+                // 隐藏加载动画
+                const loading = document.getElementById('loading');
+                loading.style.opacity = '0';
+                
+                // 显示页面内容
+                document.body.style.opacity = '1';
+                document.querySelector('.container').style.transform = 'translateY(0)';
+                
+                // 移除加载元素
+                setTimeout(function() {
+                    loading.style.display = 'none';
+                }, 500);
+            }, 800); // 增加加载时间确保所有内容已准备
+        });
+
+        // 页面卸载前添加过渡效果
+        window.addEventListener('beforeunload', function() {
             document.body.style.opacity = '0';
+            document.querySelector('.container').style.transform = 'translateY(20px)';
+        });
+
+        function navigate(url) {
+            // 显示加载动画
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('loading').style.opacity = '1';
+            
+            // 页面过渡效果
+            document.body.style.opacity = '0';
+            document.querySelector('.container').style.transform = 'translateY(20px)';
+            
+            // 添加延迟确保过渡效果可见
             setTimeout(() => {
                 window.location.href = url;
-            }, 300);
+            }, 500);
         }
 
-        // 页面加载动画
-        window.addEventListener('load', () => {
-            document.body.style.opacity = '0';
-            setTimeout(() => {
-                document.body.style.opacity = '1';
-                document.body.style.transition = 'opacity 0.5s ease';
-            }, 100);
-        });
+        // 防止页面缓存问题
+        window.onpageshow = function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
     </script>
 </body>
-
 </html>
-
